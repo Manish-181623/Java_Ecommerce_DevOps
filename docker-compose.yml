@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    image: java_backend_image
+    container_name: java__ecommerce_container
+    ports:
+      - "8090:8080"
+    environment:
+      - SPRING_DATASOURCE_HOST=mongodb
+      - SPRING_DATASOURCE_PORT=27017
+      - SPRING_DATASOURCE_DATABASE=test
+      - JWT_SECRET_KEY=JWTSuperSecretKey
+      - JWT_EXPIRATION_TIME_MS=604800000
+      - KEYSTORE_PASSWORD=secret
+      # - SPRING_MAIL_HOST=smtp
+      # - SPRING_MAIL_PORT=25
+      # - SPRING_MAIL_USERNAME=your_mailtrap_username
+      # - SPRING_MAIL_PASSWORD=your_mailtrap_password
+      # - SPRING_MAIL_PROTOCOL=smtp
+      - SPRING_CACHE_TYPE=redis
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_DATA_ELASTICSEARCH_REPOSITORIES_ENABLED=true
+      - SPRING_DATA_ELASTICSEARCH_CLUSTER_NAME=elasticsearch
+      - SPRING_DATA_ELASTICSEARCH_CLUSTER_NODES=elasticsearch:9300
+      - ACCOUNT_VERIFICATION_URL=http://localhost:8090/api/auth/accountVerification
+    networks:
+      - ecommerce-network
+    volumes:
+      - app-data:/app
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+      # - smtp
+
+  mongodb:
+    image: mongo:4.4
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ecommerce-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce-network
+
+  frontend:
+    build:
+      context: ./Client/Ecommerce-frontend/
+      dockerfile: Dockerfile
+    image: java_angular_frontend
+    container_name: angular_app
+    ports:
+      - "4200:80"
+    networks:
+      - ecommerce-network
+    depends_on:
+      - backend
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9300:9300"
+      - "9200:9200"
+    networks:
+      - ecommerce-network
+
+  # smtp:
+  #   image: maildev/maildev
+  #   container_name: smtp
+  #   ports:
+  #     - "25:25"
+  #     - "80:80"
+  #   environment:
+  #     - MAILDEV_INCOMING_USER=your_mailtrap_username
+  #     - MAILDEV_INCOMING_PASS=your_mailtrap_password
+
+networks:
+  ecommerce-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  mongo-data:
